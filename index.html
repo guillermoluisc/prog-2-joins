@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guía de JOINs SQL</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1f2328; --muted: #656d76;
+    --border: #d9dcdf; --accent: #0969da; --accent-soft: #ddf4ff;
+    --code-bg: #f1f3f5; --null: #b35900; --warn-bg: #fff8e1; --warn-border: #e0a800;
+    --hl: #fff3cd; --venn: #0969da; --venn-line: #57606a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --panel: #161b22; --text: #e6edf3; --muted: #8d96a0;
+      --border: #30363d; --accent: #4493f8; --accent-soft: #132339;
+      --code-bg: #0b0f14; --null: #f0883e; --warn-bg: #2b2211; --warn-border: #9e6a03;
+      --hl: #3a3014; --venn: #4493f8; --venn-line: #8d96a0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .layout { max-width: 960px; margin: 0 auto; }
+  main { padding: 32px 40px 80px; }
+  h1 { font-size: 32px; margin: 0 0 8px; }
+  h2 { font-size: 24px; margin: 56px 0 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  p { margin: 8px 0; }
+  .lead { color: var(--muted); font-size: 17px; }
+  code { font-family: Consolas, "Cascadia Code", monospace; font-size: 14px; }
+  p code, li code, td code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  .code { position: relative; margin: 12px 0; }
+  .code pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; margin: 0;
+  }
+  .code button {
+    position: absolute; top: 8px; right: 8px; font-size: 12px; padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
+    color: var(--text); cursor: pointer;
+  }
+  .code button:hover { border-color: var(--accent); color: var(--accent); }
+  .kw { color: #cf222e; font-weight: 600; }
+  .cm { color: var(--muted); font-style: italic; }
+  @media (prefers-color-scheme: dark) { .kw { color: #ff7b72; } }
+  table.res { border-collapse: collapse; margin: 10px 0; font-size: 14px; background: var(--panel); }
+  table.res th, table.res td { border: 1px solid var(--border); padding: 4px 12px; text-align: left; }
+  table.res th { background: var(--code-bg); }
+  table.res tr.hl td { background: var(--hl); }
+  .null { color: var(--null); font-style: italic; font-weight: 600; }
+  .note { color: var(--muted); font-size: 14px; margin-left: 6px; }
+  .tables-grid { display: flex; flex-wrap: wrap; gap: 20px; }
+  .tables-grid > div { min-width: 0; }
+  .tables-grid h4 { margin: 12px 0 0; font-size: 14px; text-transform: uppercase; color: var(--muted); }
+  .box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; margin: 14px 0;
+  }
+  .box.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .box.fijate::before { content: "Observar: "; font-weight: 700; }
+  .mini {
+    background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 8px;
+    padding: 12px 18px; margin: 14px 0;
+  }
+  .mini-t { font-weight: 700; color: var(--accent); text-transform: uppercase; font-size: 13px; letter-spacing: .05em; }
+  .mini-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 8px 0; }
+  .mini-row table.res { margin: 0; }
+  .mini-row .arrow { font-size: 22px; color: var(--muted); }
+  .mini .fuera { color: var(--muted); text-decoration: line-through; }
+  .real {
+    background: var(--panel); border: 1px solid var(--border); border-left: 4px solid #1a7f37;
+    border-radius: 8px; padding: 12px 18px; margin: 24px 0 8px;
+  }
+  .real-t { font-weight: 700; color: #1a7f37; text-transform: uppercase; font-size: 13px; letter-spacing: .05em; }
+  .ej { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 4px 18px 12px; margin: 14px 0; }
+  .ej h3 { margin-top: 14px; }
+  .pista { color: var(--muted); font-size: 15px; }
+  h3.nivel { margin-top: 36px; color: var(--accent); }
+  @media (prefers-color-scheme: dark) { .real { border-left-color: #3fb950; } .real-t { color: #3fb950; } }
+  .res tr.tachada td { text-decoration: line-through; color: var(--muted); }
+  .res tr.tachada td.note { text-decoration: none; }
+  .venns { display: flex; flex-wrap: wrap; gap: 24px; margin: 16px 0; }
+  .venn { text-align: center; font-size: 14px; }
+  .venn svg { width: 150px; height: 100px; display: block; }
+  .venn b { display: block; }
+  .explain { margin: 6px 0 6px 0; padding-left: 20px; }
+  .explain li { margin: 2px 0; }
+  .cheat td:first-child { font-family: Consolas, monospace; font-size: 13px; white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+  details { margin: 12px 0; }
+  summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+  @media (max-width: 800px) {
+    main { padding: 20px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+
+<main>
+
+<h1 id="inicio">Guía rápida de JOINs en SQL</h1>
+<p class="lead">XAMPP / phpMyAdmin / MariaDB. Todo lo de aquí funciona igual en MySQL.</p>
+
+<div class="box">
+  <strong>Antes de empezar:</strong>
+  <ol>
+    <li>Abrir <code>http://localhost/phpmyadmin</code>.</li>
+    <li>Pestaña <strong>SQL</strong>: pegar el contenido de <code>01_crear_tablas.sql</code> (disponible también <a href="#script">al final de esta página</a>) y pulsar <strong>Continuar</strong>.</li>
+    <li>Seleccionar la base de datos <code>joins_demo</code> en el panel izquierdo, ir a la pestaña <strong>SQL</strong> y probar cada consulta de esta guía (cada bloque tiene un botón <em>Copiar</em>).</li>
+  </ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="tablas">0. Las tablas</h2>
+<p>Todos los ejemplos giran en torno a estas tablas.</p>
+
+<div class="tables-grid">
+  <div>
+    <h4>ciudades</h4>
+    <table class="res">
+      <tr><th>id</th><th>nombre</th></tr>
+      <tr><td>1</td><td>Madrid</td></tr>
+      <tr><td>2</td><td>Barcelona</td></tr>
+      <tr><td>3</td><td>Sevilla</td></tr>
+      <tr class="hl"><td>4</td><td>Valencia</td></tr>
+    </table>
+  </div>
+  <div>
+    <h4>clientes</h4>
+    <table class="res">
+      <tr><th>id</th><th>nombre</th><th>id_ciudad</th></tr>
+      <tr><td>1</td><td>Ana</td><td>1</td></tr>
+      <tr><td>2</td><td>Luis</td><td>2</td></tr>
+      <tr><td>3</td><td>Marta</td><td>1</td></tr>
+      <tr class="hl"><td>4</td><td>Pedro</td><td>3</td></tr>
+      <tr class="hl"><td>5</td><td>Sara</td><td class="null">NULL</td></tr>
+    </table>
+  </div>
+  <div>
+    <h4>productos</h4>
+    <table class="res">
+      <tr><th>id</th><th>nombre</th><th>precio</th></tr>
+      <tr><td>1</td><td>Teclado</td><td>25</td></tr>
+      <tr><td>2</td><td>Raton</td><td>15</td></tr>
+      <tr><td>3</td><td>Monitor</td><td>150</td></tr>
+      <tr class="hl"><td>4</td><td>Webcam</td><td>40</td></tr>
+    </table>
+  </div>
+  <div>
+    <h4>pedidos</h4>
+    <table class="res">
+      <tr><th>id</th><th>id_cliente</th><th>id_producto</th><th>cantidad</th><th></th></tr>
+      <tr><td>1</td><td>1</td><td>1</td><td>1</td><td class="note">Ana → Teclado</td></tr>
+      <tr><td>2</td><td>1</td><td>3</td><td>2</td><td class="note">Ana → Monitor</td></tr>
+      <tr><td>3</td><td>2</td><td>2</td><td>3</td><td class="note">Luis → Raton</td></tr>
+      <tr><td>4</td><td>3</td><td>1</td><td>1</td><td class="note">Marta → Teclado</td></tr>
+      <tr><td>5</td><td>5</td><td>2</td><td>1</td><td class="note">Sara → Raton</td></tr>
+      <tr class="hl"><td>6</td><td>99</td><td>3</td><td>1</td><td class="note">??? → Monitor</td></tr>
+    </table>
+  </div>
+</div>
+
+<h3>Cómo se relacionan (solo de forma lógica, NO hay foreign keys)</h3>
+<ul class="explain">
+  <li><code>clientes.id_ciudad</code> = <code>ciudades.id</code></li>
+  <li><code>pedidos.id_cliente</code> = <code>clientes.id</code></li>
+  <li><code>pedidos.id_producto</code> = <code>productos.id</code></li>
+</ul>
+
+<div class="box warn">
+  <strong>Las "trampas" que hemos puesto a propósito</strong> (filas resaltadas):
+  <ul class="explain">
+    <li><strong>Pedro</strong> → no tiene pedidos</li>
+    <li><strong>Sara</strong> → no tiene ciudad (<span class="null">NULL</span>)</li>
+    <li><strong>Valencia</strong> → no tiene clientes</li>
+    <li><strong>Webcam</strong> → nunca se ha vendido</li>
+    <li><strong>Pedido 6</strong> → su cliente (99) no existe</li>
+  </ul>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="idea">Idea clave en 5 segundos</h2>
+<p>Un <strong>JOIN</strong> junta filas de dos tablas cuando se cumple una condición (normalmente "este id = aquel id").</p>
+
+<div class="venns">
+  <div class="venn">
+    <svg viewBox="0 0 150 100" aria-label="INNER JOIN">
+      <defs><clipPath id="cA1"><circle cx="55" cy="50" r="38"/></clipPath></defs>
+      <circle cx="95" cy="50" r="38" fill="var(--venn)" clip-path="url(#cA1)"/>
+      <circle cx="55" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <circle cx="95" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <text x="30" y="55" fill="var(--text)" font-size="14" font-weight="700">A</text>
+      <text x="112" y="55" fill="var(--text)" font-size="14" font-weight="700">B</text>
+    </svg>
+    <b>INNER JOIN</b>solo lo que encaja en las dos
+  </div>
+  <div class="venn">
+    <svg viewBox="0 0 150 100" aria-label="LEFT JOIN">
+      <circle cx="55" cy="50" r="38" fill="var(--venn)"/>
+      <circle cx="55" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <circle cx="95" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <text x="30" y="55" fill="#fff" font-size="14" font-weight="700">A</text>
+      <text x="112" y="55" fill="var(--text)" font-size="14" font-weight="700">B</text>
+    </svg>
+    <b>LEFT JOIN</b>todo A + lo que encaje de B
+  </div>
+  <div class="venn">
+    <svg viewBox="0 0 150 100" aria-label="RIGHT JOIN">
+      <circle cx="95" cy="50" r="38" fill="var(--venn)"/>
+      <circle cx="55" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <circle cx="95" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <text x="30" y="55" fill="var(--text)" font-size="14" font-weight="700">A</text>
+      <text x="112" y="55" fill="#fff" font-size="14" font-weight="700">B</text>
+    </svg>
+    <b>RIGHT JOIN</b>todo B + lo que encaje de A
+  </div>
+  <div class="venn">
+    <svg viewBox="0 0 150 100" aria-label="LEFT JOIN con IS NULL">
+      <defs><mask id="mB"><rect width="150" height="100" fill="#fff"/><circle cx="95" cy="50" r="38" fill="#000"/></mask></defs>
+      <circle cx="55" cy="50" r="38" fill="var(--venn)" mask="url(#mB)"/>
+      <circle cx="55" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <circle cx="95" cy="50" r="38" fill="none" stroke="var(--venn-line)" stroke-width="2"/>
+      <text x="30" y="55" fill="#fff" font-size="14" font-weight="700">A</text>
+      <text x="112" y="55" fill="var(--text)" font-size="14" font-weight="700">B</text>
+    </svg>
+    <b>LEFT + IS NULL</b>A sin pareja en B
+  </div>
+</div>
+
+<ul class="explain">
+  <li><strong>Izquierda (A)</strong> = la tabla que va en el <code>FROM</code> (o antes del JOIN).</li>
+  <li><strong>Derecha (B)</strong> = la tabla que va después de la palabra <code>JOIN</code>.</li>
+  <li>Cuando no hay pareja, las columnas de la otra tabla salen como <span class="null">NULL</span>.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="simple">1. Join simple (implícito, con coma y WHERE)</h2>
+<p><strong>Qué hace:</strong> se ponen las tablas separadas por coma en el <code>FROM</code> y la condición de unión en el <code>WHERE</code>. Funciona <strong>igual que un INNER JOIN</strong>.</p>
+
+<div class="mini">
+  <div class="mini-t">En 5 segundos</div>
+  <p>Hay un montón de <strong>medias izquierdas</strong> y otro de <strong>medias derechas</strong>. Se ponen los dos montones juntos y se dice: "junta cada izquierda con la derecha del mismo color". Solo se quedan los pares que encajan.</p>
+  <div class="mini-row">
+    <table class="res"><tr><th>media izquierda</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td class="fuera">verde</td></tr></table>
+    <table class="res"><tr><th>media derecha</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td class="fuera">amarilla</td></tr></table>
+    <span class="arrow">→</span>
+    <table class="res"><tr><th>izquierda</th><th>derecha</th></tr><tr><td>roja</td><td>roja</td></tr><tr><td>azul</td><td>azul</td></tr></table>
+  </div>
+  <p>La verde y la amarilla no tienen pareja del mismo color: las dos se quedan fuera.</p>
+</div>
+
+<div class="code"><pre><code>SELECT c.nombre AS cliente, ci.nombre AS ciudad
+FROM clientes c, ciudades ci
+WHERE c.id_ciudad = ci.id;</code></pre></div>
+
+<ul class="explain">
+  <li><code>clientes c</code> → "c" es un <strong>alias</strong> (apodo) para escribir menos.</li>
+  <li><code>FROM clientes c, ciudades ci</code> → combina clientes con ciudades.</li>
+  <li><code>WHERE c.id_ciudad = ci.id</code> → solo se conservan las parejas donde el id coincide.</li>
+  <li><code>AS cliente</code> → renombra la columna en el resultado.</li>
+</ul>
+
+<p><strong>Resultado (4 filas):</strong></p>
+<table class="res">
+  <tr><th>cliente</th><th>ciudad</th></tr>
+  <tr><td>Ana</td><td>Madrid</td></tr>
+  <tr><td>Luis</td><td>Barcelona</td></tr>
+  <tr><td>Marta</td><td>Madrid</td></tr>
+  <tr><td>Pedro</td><td>Sevilla</td></tr>
+</table>
+<div class="box fijate">Sara NO sale (su ciudad es NULL, no coincide con nada). Valencia NO sale (nadie vive allí).</div>
+
+<!-- ================================================================ -->
+<div class="real">
+  <div class="real-t">En un proyecto real</div>
+  <p><strong>Intranet antigua en PHP para gestionar el personal de una empresa</strong></p>
+  <p>La pantalla de empleados muestra el nombre de cada persona junto al de su departamento. El código se escribió hace años con la sintaxis de coma y WHERE:</p>
+  <div class="code"><pre><code>SELECT e.nombre, d.nombre AS departamento
+FROM empleados e, departamentos d
+WHERE e.id_departamento = d.id;</code></pre></div>
+  <p>Es muy habitual encontrar esta forma en código heredado, así que conviene saber leerla. En código nuevo se escribe con <code>INNER JOIN</code>.</p>
+</div>
+
+<h2 id="inner">2. INNER JOIN</h2>
+<p><strong>Qué hace:</strong> solo devuelve filas que tienen pareja en <strong>ambas</strong> tablas. Lo que no tiene pareja, <strong>desaparece</strong>. Es la forma moderna y recomendada del join simple.</p>
+
+<div class="mini">
+  <div class="mini-t">En 5 segundos</div>
+  <p>Es como emparejar medias: <strong>solo se guardan las que tienen su par</strong>. La media suelta no entra en el cajón y no aparece.</p>
+  <div class="mini-row">
+    <table class="res"><tr><th>media izquierda</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td class="fuera">verde</td></tr></table>
+    <table class="res"><tr><th>media derecha</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td class="fuera">amarilla</td></tr></table>
+    <span class="arrow">→</span>
+    <table class="res"><tr><th>izquierda</th><th>derecha</th></tr><tr><td>roja</td><td>roja</td></tr><tr><td>azul</td><td>azul</td></tr></table>
+  </div>
+  <p>Resultado: solo el par rojo y el par azul, porque son los únicos completos.</p>
+</div>
+
+<h3>2a) La misma consulta de antes, escrita con INNER JOIN</h3>
+<div class="code"><pre><code>SELECT c.nombre AS cliente, ci.nombre AS ciudad
+FROM clientes c
+INNER JOIN ciudades ci ON c.id_ciudad = ci.id;</code></pre></div>
+<ul class="explain">
+  <li><code>INNER JOIN ciudades ci</code> → une con la tabla ciudades.</li>
+  <li><code>ON c.id_ciudad = ci.id</code> → la condición de unión va en el <code>ON</code> (ya no en el WHERE).</li>
+  <li>Resultado: <strong>idéntico al punto 1</strong> (4 filas).</li>
+  <li>Escribir solo <code>JOIN</code> es lo mismo que <code>INNER JOIN</code>.</li>
+</ul>
+
+<h3>2b) Clientes con sus pedidos</h3>
+<div class="code"><pre><code>SELECT c.nombre AS cliente, p.id AS pedido, p.cantidad
+FROM clientes c
+INNER JOIN pedidos p ON p.id_cliente = c.id
+ORDER BY c.id, p.id;</code></pre></div>
+
+<p><strong>Resultado (5 filas):</strong></p>
+<table class="res">
+  <tr><th>cliente</th><th>pedido</th><th>cantidad</th></tr>
+  <tr><td>Ana</td><td>1</td><td>1</td></tr>
+  <tr class="hl"><td>Ana</td><td>2</td><td>2</td></tr>
+  <tr><td>Luis</td><td>3</td><td>3</td></tr>
+  <tr><td>Marta</td><td>4</td><td>1</td></tr>
+  <tr><td>Sara</td><td>5</td><td>1</td></tr>
+</table>
+<div class="box fijate">Ana sale 2 veces (tiene 2 pedidos). Pedro NO sale (no tiene pedidos). El pedido 6 NO sale (su cliente 99 no existe).</div>
+
+<!-- ================================================================ -->
+<div class="real">
+  <div class="real-t">En un proyecto real</div>
+  <p><strong>Tienda online (tipo WooCommerce o PrestaShop): pantalla "Mis pedidos"</strong></p>
+  <p>Cuando un cliente entra en su cuenta, ve sus pedidos con el nombre de cada producto. Solo interesan los pedidos que tienen un producto válido:</p>
+  <div class="code"><pre><code>SELECT p.fecha, pr.nombre AS producto, p.cantidad
+FROM pedidos p
+INNER JOIN productos pr ON pr.id = p.id_producto
+WHERE p.id_cliente = 7;   -- el cliente que ha iniciado sesión</code></pre></div>
+  <p>El <code>id_cliente</code> sale de la sesión del usuario (en PHP, por ejemplo, <code>$_SESSION['id_cliente']</code>).</p>
+</div>
+
+<h2 id="left">3. LEFT JOIN</h2>
+<p><strong>Qué hace:</strong> saca <strong>todas</strong> las filas de la tabla <strong>izquierda</strong>. Si tienen pareja en la derecha, la muestra; si no, rellena con <span class="null">NULL</span>.</p>
+
+<div class="mini">
+  <div class="mini-t">En 5 segundos</div>
+  <p>Se toman <strong>todas las medias izquierdas</strong> (tabla izquierda) y se les busca su derecha. La izquierda que no encuentra pareja también se guarda, pero con el hueco vacío (<span class="null">NULL</span>).</p>
+  <div class="mini-row">
+    <table class="res"><tr><th>media izquierda</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td>verde</td></tr></table>
+    <table class="res"><tr><th>media derecha</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td class="fuera">amarilla</td></tr></table>
+    <span class="arrow">→</span>
+    <table class="res"><tr><th>izquierda</th><th>derecha</th></tr><tr><td>roja</td><td>roja</td></tr><tr><td>azul</td><td>azul</td></tr><tr class="hl"><td>verde</td><td class="null">NULL</td></tr></table>
+  </div>
+  <p>Todas las izquierdas salen. La amarilla no sale porque es una derecha sin pareja.</p>
+</div>
+
+<div class="code"><pre><code>SELECT c.nombre AS cliente, p.id AS pedido, p.cantidad
+FROM clientes c                              -- izquierda: clientes
+LEFT JOIN pedidos p ON p.id_cliente = c.id   -- derecha: pedidos
+ORDER BY c.id, p.id;</code></pre></div>
+
+<p><strong>Resultado (6 filas):</strong></p>
+<table class="res">
+  <tr><th>cliente</th><th>pedido</th><th>cantidad</th></tr>
+  <tr><td>Ana</td><td>1</td><td>1</td></tr>
+  <tr><td>Ana</td><td>2</td><td>2</td></tr>
+  <tr><td>Luis</td><td>3</td><td>3</td></tr>
+  <tr><td>Marta</td><td>4</td><td>1</td></tr>
+  <tr class="hl"><td>Pedro</td><td class="null">NULL</td><td class="null">NULL</td></tr>
+  <tr><td>Sara</td><td>5</td><td>1</td></tr>
+</table>
+<div class="box fijate">Ahora SÍ sale Pedro (con NULL). El pedido 6 sigue sin salir (no es de la tabla izquierda).</div>
+
+<h3>3b) Truco muy usado: "lo que NO tiene pareja" (LEFT JOIN + IS NULL)</h3>
+
+<p>Clientes que nunca han comprado:</p>
+<div class="code"><pre><code>SELECT c.nombre
+FROM clientes c
+LEFT JOIN pedidos p ON p.id_cliente = c.id
+WHERE p.id IS NULL;</code></pre></div>
+<p>Resultado: <strong>Pedro</strong></p>
+
+<p>Productos que nunca se han vendido:</p>
+<div class="code"><pre><code>SELECT pr.nombre
+FROM productos pr
+LEFT JOIN pedidos p ON p.id_producto = pr.id
+WHERE p.id IS NULL;</code></pre></div>
+<p>Resultado: <strong>Webcam</strong></p>
+
+<p>Ciudades sin clientes:</p>
+<div class="code"><pre><code>SELECT ci.nombre
+FROM ciudades ci
+LEFT JOIN clientes c ON c.id_ciudad = ci.id
+WHERE c.id IS NULL;</code></pre></div>
+<p>Resultado: <strong>Valencia</strong></p>
+
+<!-- ================================================================ -->
+<div class="real">
+  <div class="real-t">En un proyecto real</div>
+  <p><strong>Plataforma educativa (tipo Moodle): notas de una tarea</strong></p>
+  <p>El profesor quiere ver <strong>todos</strong> los alumnos del curso con su nota en la tarea 3. Los que no la entregaron también tienen que salir, para saber quién falta:</p>
+  <div class="code"><pre><code>SELECT a.nombre, e.nota
+FROM alumnos a
+LEFT JOIN entregas e ON e.id_alumno = a.id AND e.id_tarea = 3;</code></pre></div>
+  <p>Los alumnos con nota <span class="null">NULL</span> son los que no entregaron, y la aplicación los muestra como "No entregado". Con el truco de <code>WHERE e.id IS NULL</code> se saca solo la lista de los que faltan, por ejemplo para enviarles un recordatorio por correo.</p>
+</div>
+
+<h2 id="right">4. RIGHT JOIN</h2>
+<p><strong>Qué hace:</strong> lo mismo que LEFT pero al revés: <strong>todas</strong> las filas de la tabla <strong>derecha</strong>.</p>
+
+<div class="mini">
+  <div class="mini-t">En 5 segundos</div>
+  <p>Ahora se toman <strong>todas las medias derechas</strong> (tabla derecha) y se les busca su izquierda. La derecha que no encuentra pareja también se guarda, con la izquierda vacía (<span class="null">NULL</span>).</p>
+  <div class="mini-row">
+    <table class="res"><tr><th>media izquierda</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td class="fuera">verde</td></tr></table>
+    <table class="res"><tr><th>media derecha</th></tr><tr><td>roja</td></tr><tr><td>azul</td></tr><tr><td>amarilla</td></tr></table>
+    <span class="arrow">→</span>
+    <table class="res"><tr><th>izquierda</th><th>derecha</th></tr><tr><td>roja</td><td>roja</td></tr><tr><td>azul</td><td>azul</td></tr><tr class="hl"><td class="null">NULL</td><td>amarilla</td></tr></table>
+  </div>
+  <p>Todas las derechas salen. La verde no sale porque es una izquierda sin pareja.</p>
+</div>
+
+<div class="code"><pre><code>SELECT c.nombre AS cliente, p.id AS pedido, p.cantidad
+FROM clientes c                               -- izquierda: clientes
+RIGHT JOIN pedidos p ON p.id_cliente = c.id   -- derecha: pedidos
+ORDER BY p.id;</code></pre></div>
+
+<p><strong>Resultado (6 filas):</strong></p>
+<table class="res">
+  <tr><th>cliente</th><th>pedido</th><th>cantidad</th></tr>
+  <tr><td>Ana</td><td>1</td><td>1</td></tr>
+  <tr><td>Ana</td><td>2</td><td>2</td></tr>
+  <tr><td>Luis</td><td>3</td><td>3</td></tr>
+  <tr><td>Marta</td><td>4</td><td>1</td></tr>
+  <tr><td>Sara</td><td>5</td><td>1</td></tr>
+  <tr class="hl"><td class="null">NULL</td><td>6</td><td>1</td></tr>
+</table>
+<div class="box fijate">Sale el pedido 6 con cliente NULL (pedido huérfano). Pedro ya NO sale.</div>
+
+<div class="box">
+  <strong>Truco:</strong> un RIGHT JOIN siempre se puede escribir como LEFT JOIN cambiando el orden de las tablas. Esto da exactamente lo mismo:
+  <div class="code"><pre><code>SELECT c.nombre AS cliente, p.id AS pedido, p.cantidad
+FROM pedidos p
+LEFT JOIN clientes c ON p.id_cliente = c.id
+ORDER BY p.id;</code></pre></div>
+  Por eso en la práctica casi todo el mundo usa solo LEFT JOIN.
+</div>
+
+<!-- ================================================================ -->
+<div class="real">
+  <div class="real-t">En un proyecto real</div>
+  <p><strong>Migración de datos: importar un Excel de ventas antiguo</strong></p>
+  <p>Una empresa pasa sus ventas de un Excel a la base de datos. Como no hay foreign keys, algunas ventas apuntan a vendedores que ya no existen. Antes de dar la migración por buena, hay que ver <strong>todas</strong> las ventas con su vendedor:</p>
+  <div class="code"><pre><code>SELECT v.id, v.importe, e.nombre AS vendedor
+FROM empleados e
+RIGHT JOIN ventas v ON v.id_empleado = e.id;</code></pre></div>
+  <p>Las ventas con vendedor <span class="null">NULL</span> son las que hay que revisar a mano. (En la práctica se suele escribir como LEFT JOIN empezando por <code>ventas</code>.)</p>
+</div>
+
+<h2 id="cuatro">5. Unir las 4 tablas a la vez</h2>
+<p>Se encadenan JOINs uno detrás de otro. <strong>Cada JOIN lleva su ON.</strong></p>
+
+<div class="mini">
+  <div class="mini-t">En 5 segundos</div>
+  <p>Es como seguir flechas en un mapa del tesoro: desde el <strong>pedido</strong> se salta al <strong>cliente</strong> (por <code>id_cliente</code>), desde el cliente a su <strong>ciudad</strong> (por <code>id_ciudad</code>) y desde el pedido al <strong>producto</strong> (por <code>id_producto</code>). Cada salto es un JOIN.</p>
+  <div class="mini-row">
+    <table class="res"><tr><th>pedido</th></tr><tr><td>1</td></tr></table>
+    <span class="arrow">→</span>
+    <table class="res"><tr><th>cliente</th></tr><tr><td>Ana</td></tr></table>
+    <span class="arrow">→</span>
+    <table class="res"><tr><th>ciudad</th></tr><tr><td>Madrid</td></tr></table>
+    <span class="arrow">+</span>
+    <table class="res"><tr><th>producto</th></tr><tr><td>Teclado</td></tr></table>
+  </div>
+  <p>Con INNER, si <strong>una sola flecha</strong> no lleva a ningún sitio, se pierde la fila entera. Con LEFT, la fila se queda y el hueco sale como <span class="null">NULL</span>.</p>
+</div>
+
+<h3>5a) Con INNER JOIN (solo lo que encaja en TODO)</h3>
+<div class="code"><pre><code>SELECT p.id        AS pedido,
+       c.nombre    AS cliente,
+       ci.nombre   AS ciudad,
+       pr.nombre   AS producto,
+       p.cantidad,
+       pr.precio,
+       p.cantidad * pr.precio AS total
+FROM pedidos p
+INNER JOIN clientes  c  ON p.id_cliente  = c.id
+INNER JOIN ciudades  ci ON c.id_ciudad   = ci.id
+INNER JOIN productos pr ON p.id_producto = pr.id
+ORDER BY p.id;</code></pre></div>
+
+<p><strong>Resultado (4 filas):</strong></p>
+<div class="scroll">
+<table class="res">
+  <tr><th>pedido</th><th>cliente</th><th>ciudad</th><th>producto</th><th>cantidad</th><th>precio</th><th>total</th></tr>
+  <tr><td>1</td><td>Ana</td><td>Madrid</td><td>Teclado</td><td>1</td><td>25</td><td>25</td></tr>
+  <tr><td>2</td><td>Ana</td><td>Madrid</td><td>Monitor</td><td>2</td><td>150</td><td>300</td></tr>
+  <tr><td>3</td><td>Luis</td><td>Barcelona</td><td>Raton</td><td>3</td><td>15</td><td>45</td></tr>
+  <tr><td>4</td><td>Marta</td><td>Madrid</td><td>Teclado</td><td>1</td><td>25</td><td>25</td></tr>
+</table>
+</div>
+<div class="box fijate">empiezan 6 pedidos y terminan 4. Cada INNER JOIN es un filtro: el pedido que no encuentra pareja en ese paso se elimina y ya no vuelve.</div>
+
+<p><strong>Paso a paso, qué pasa con cada pedido:</strong></p>
+<div class="scroll">
+<table class="res">
+  <tr><th>Paso</th><th>Qué busca</th><th>Qué pasa</th><th>Quedan</th></tr>
+  <tr><td>1. <code>FROM pedidos p</code></td><td>Todos los pedidos</td><td>Se parte de los 6 pedidos.</td><td>1, 2, 3, 4, 5, 6</td></tr>
+  <tr class="hl"><td>2. <code>INNER JOIN clientes</code></td><td>El cliente de cada pedido</td><td>El pedido 6 busca al cliente 99, que no existe. <strong>Se elimina.</strong></td><td>1, 2, 3, 4, 5</td></tr>
+  <tr class="hl"><td>3. <code>INNER JOIN ciudades</code></td><td>La ciudad del cliente</td><td>El pedido 5 es de Sara, que tiene la ciudad en <span class="null">NULL</span>. No encuentra ciudad. <strong>Se elimina.</strong></td><td>1, 2, 3, 4</td></tr>
+  <tr><td>4. <code>INNER JOIN productos</code></td><td>El producto del pedido</td><td>Los 4 pedidos que quedan tienen producto. No se elimina ninguno.</td><td>1, 2, 3, 4</td></tr>
+</table>
+</div>
+<p>El pedido 5 sí tiene cliente y producto: falla solo en un paso (la ciudad) y eso basta para que desaparezca. Con INNER JOIN, <strong>una fila tiene que encontrar pareja en todos los pasos</strong> para llegar al resultado.</p>
+
+<h3>5b) Lo mismo con LEFT JOIN (no se pierde ningún pedido)</h3>
+<div class="code"><pre><code>SELECT p.id        AS pedido,
+       c.nombre    AS cliente,
+       ci.nombre   AS ciudad,
+       pr.nombre   AS producto,
+       p.cantidad,
+       pr.precio,
+       p.cantidad * pr.precio AS total
+FROM pedidos p
+LEFT JOIN clientes  c  ON p.id_cliente  = c.id
+LEFT JOIN ciudades  ci ON c.id_ciudad   = ci.id
+LEFT JOIN productos pr ON p.id_producto = pr.id
+ORDER BY p.id;</code></pre></div>
+
+<p><strong>Resultado (6 filas):</strong></p>
+<div class="scroll">
+<table class="res">
+  <tr><th>pedido</th><th>cliente</th><th>ciudad</th><th>producto</th><th>cantidad</th><th>precio</th><th>total</th></tr>
+  <tr><td>1</td><td>Ana</td><td>Madrid</td><td>Teclado</td><td>1</td><td>25</td><td>25</td></tr>
+  <tr><td>2</td><td>Ana</td><td>Madrid</td><td>Monitor</td><td>2</td><td>150</td><td>300</td></tr>
+  <tr><td>3</td><td>Luis</td><td>Barcelona</td><td>Raton</td><td>3</td><td>15</td><td>45</td></tr>
+  <tr><td>4</td><td>Marta</td><td>Madrid</td><td>Teclado</td><td>1</td><td>25</td><td>25</td></tr>
+  <tr class="hl"><td>5</td><td>Sara</td><td class="null">NULL</td><td>Raton</td><td>1</td><td>15</td><td>15</td></tr>
+  <tr class="hl"><td>6</td><td class="null">NULL</td><td class="null">NULL</td><td>Monitor</td><td>1</td><td>150</td><td>150</td></tr>
+</table>
+</div>
+
+<!-- ================================================================ -->
+<div class="real">
+  <div class="real-t">En un proyecto real</div>
+  <p><strong>Programa de facturación (ERP): imprimir una factura</strong></p>
+  <p>Para generar el PDF de una factura hacen falta datos de varias tablas a la vez: la factura, el cliente, su ciudad, las líneas y los productos:</p>
+  <div class="code"><pre><code>SELECT f.numero, c.nombre AS cliente, ci.nombre AS ciudad,
+       pr.nombre AS producto, l.cantidad, pr.precio,
+       l.cantidad * pr.precio AS importe
+FROM facturas f
+INNER JOIN clientes       c  ON c.id  = f.id_cliente
+INNER JOIN ciudades       ci ON ci.id = c.id_ciudad
+INNER JOIN lineas_factura l  ON l.id_factura = f.id
+INNER JOIN productos      pr ON pr.id = l.id_producto
+WHERE f.numero = '2026-0042';</code></pre></div>
+  <p>Cuidado: si el cliente no tuviera ciudad, este INNER JOIN haría desaparecer la factura entera. Por eso en estos casos se suele usar LEFT JOIN para las tablas opcionales (como la ciudad).</p>
+</div>
+
+<h2 id="consideraciones">6. Consideraciones a tener en cuenta (errores típicos)</h2>
+
+<h3>6.1 Olvidar la condición = producto cartesiano</h3>
+<p>Si no se pone WHERE (join simple) u ON, se combina <strong>todo con todo</strong>:</p>
+<div class="code"><pre><code>SELECT c.nombre, ci.nombre
+FROM clientes c, ciudades ci;</code></pre></div>
+<p>5 clientes × 4 ciudades = <strong>20 filas sin sentido</strong>. Eso se llama <code>CROSS JOIN</code>. Casi siempre es un error.</p>
+
+<div class="mini">
+  <div class="mini-t">En 5 segundos</div>
+  <p>Si no se dice "junta cada izquierda con la derecha <strong>del mismo color</strong>", SQL junta <strong>cada izquierda con todas las derechas</strong>: 3 × 3 = 9 pares, casi todos desparejados.</p>
+  <div class="mini-row">
+    <table class="res"><tr><th>izquierda</th><th>derecha</th></tr><tr><td>roja</td><td>roja</td></tr><tr><td>roja</td><td>azul</td></tr><tr><td>roja</td><td>amarilla</td></tr><tr><td>azul</td><td>roja</td></tr><tr><td>azul</td><td>azul</td></tr><tr><td>azul</td><td>amarilla</td></tr><tr><td>verde</td><td>roja</td></tr><tr><td>verde</td><td>azul</td></tr><tr><td>verde</td><td>amarilla</td></tr></table>
+  </div>
+  <p>La verde no tiene pareja, pero aquí aparece con tres medias distintas.</p>
+</div>
+
+<h3>6.2 Usar alias y prefijos</h3>
+<p><code>id</code> y <code>nombre</code> existen en varias tablas. Si se escribe solo <code>nombre</code> sale el error:</p>
+<div class="code"><pre><code>Column 'nombre' in field list is ambiguous</code></pre></div>
+<p>Solución: escribir siempre <code>c.nombre</code>, <code>ci.nombre</code>, <code>pr.nombre</code>…</p>
+
+<h3>6.3 En un LEFT JOIN no es lo mismo filtrar en el ON que en el WHERE</h3>
+<p><strong>Objetivo:</strong> ver <strong>todos</strong> los clientes y, al lado, solo sus pedidos grandes (de más de 1 unidad).</p>
+
+<div class="mini">
+  <div class="mini-t">En 5 segundos</div>
+  <ul class="explain">
+    <li><strong>ON</strong> = la condición para <strong>buscar pareja</strong>. Si un cliente no encuentra pareja que la cumpla, se queda igual, con <span class="null">NULL</span> al lado.</li>
+    <li><strong>WHERE</strong> = un filtro que se aplica <strong>al final</strong>, sobre el resultado ya unido. Borra toda fila que no cumpla la condición, incluidas las que tienen <span class="null">NULL</span>.</li>
+  </ul>
+  <p>Con las medias: el ON es "búscale pareja, pero solo entre las rojas": si no hay roja, la media se guarda sola. El WHERE es "al final, tira todo lo que no sea rojo": las medias sueltas también acaban en la basura.</p>
+</div>
+
+<p><strong>Opción A: filtro en el <code>ON</code> (correcto para este objetivo)</strong></p>
+<div class="code"><pre><code>SELECT c.nombre, p.id AS pedido, p.cantidad
+FROM clientes c
+LEFT JOIN pedidos p ON p.id_cliente = c.id AND p.cantidad &gt; 1
+ORDER BY c.id;</code></pre></div>
+<p>A cada cliente se le buscan pedidos que sean suyos <strong>y</strong> de más de 1 unidad. Marta tiene un pedido, pero es de 1 unidad, así que no cuenta como pareja: sale con <span class="null">NULL</span>, pero sale.</p>
+<table class="res">
+  <tr><th>nombre</th><th>pedido</th><th>cantidad</th></tr>
+  <tr><td>Ana</td><td>2</td><td>2</td></tr>
+  <tr><td>Luis</td><td>3</td><td>3</td></tr>
+  <tr><td>Marta</td><td class="null">NULL</td><td class="null">NULL</td></tr>
+  <tr><td>Pedro</td><td class="null">NULL</td><td class="null">NULL</td></tr>
+  <tr><td>Sara</td><td class="null">NULL</td><td class="null">NULL</td></tr>
+</table>
+<div class="box fijate">salen los 5 clientes. Solo Ana y Luis tienen un pedido grande al lado.</div>
+
+<p><strong>Opción B: filtro en el <code>WHERE</code> (se pierden clientes)</strong></p>
+<div class="code"><pre><code>SELECT c.nombre, p.id AS pedido, p.cantidad
+FROM clientes c
+LEFT JOIN pedidos p ON p.id_cliente = c.id
+WHERE p.cantidad &gt; 1
+ORDER BY c.id;</code></pre></div>
+<p>Primero se hace el LEFT JOIN normal y después el WHERE tacha las filas que no cumplen <code>cantidad &gt; 1</code>:</p>
+<table class="res">
+  <tr><th>nombre</th><th>pedido</th><th>cantidad</th><th></th></tr>
+  <tr class="tachada"><td>Ana</td><td>1</td><td>1</td><td class="note">1 no es mayor que 1</td></tr>
+  <tr><td>Ana</td><td>2</td><td>2</td><td class="note">se queda</td></tr>
+  <tr><td>Luis</td><td>3</td><td>3</td><td class="note">se queda</td></tr>
+  <tr class="tachada"><td>Marta</td><td>4</td><td>1</td><td class="note">1 no es mayor que 1</td></tr>
+  <tr class="tachada"><td>Pedro</td><td class="null">NULL</td><td class="null">NULL</td><td class="note">NULL &gt; 1 no es verdadero</td></tr>
+  <tr class="tachada"><td>Sara</td><td>5</td><td>1</td><td class="note">1 no es mayor que 1</td></tr>
+</table>
+<p>Resultado final:</p>
+<table class="res">
+  <tr><th>nombre</th><th>pedido</th><th>cantidad</th></tr>
+  <tr><td>Ana</td><td>2</td><td>2</td></tr>
+  <tr><td>Luis</td><td>3</td><td>3</td></tr>
+</table>
+<div class="box fijate">Marta, Pedro y Sara han desaparecido. El LEFT JOIN los había conservado, pero el WHERE los ha borrado después. El resultado es el mismo que con un INNER JOIN.</div>
+
+<div class="box"><strong>Regla:</strong> en un LEFT JOIN, si el filtro es sobre la tabla de la <strong>derecha</strong> y se quieren conservar todas las filas de la izquierda, el filtro va en el <code>ON</code>, no en el <code>WHERE</code>.</div>
+
+<h3>6.4 NULL no es igual a nada (ni siquiera a otro NULL)</h3>
+<ul class="explain">
+  <li><code>id_ciudad = NULL</code> nunca es verdadero. Se usa <code>IS NULL</code> / <code>IS NOT NULL</code>.</li>
+  <li>Por eso Sara nunca encaja con ninguna ciudad en un INNER JOIN.</li>
+</ul>
+
+<h3>6.5 Las filas se multiplican</h3>
+<p>Si un cliente tiene 2 pedidos, sale 2 veces. Es normal. Hay que tenerlo en cuenta al sumar/contar: se pueden contar cosas repetidas.</p>
+
+<h3>6.6 Contar con LEFT JOIN: COUNT(columna) y no COUNT(*)</h3>
+<div class="code"><pre><code>SELECT c.nombre, COUNT(p.id) AS num_pedidos
+FROM clientes c
+LEFT JOIN pedidos p ON p.id_cliente = c.id
+GROUP BY c.id, c.nombre;</code></pre></div>
+<table class="res">
+  <tr><th>nombre</th><th>num_pedidos</th></tr>
+  <tr><td>Ana</td><td>2</td></tr>
+  <tr><td>Luis</td><td>1</td></tr>
+  <tr><td>Marta</td><td>1</td></tr>
+  <tr class="hl"><td>Pedro</td><td>0</td></tr>
+  <tr><td>Sara</td><td>1</td></tr>
+</table>
+<p>Con <code>COUNT(*)</code> Pedro saldría con 1 (cuenta su fila de NULLs). <code>COUNT(p.id)</code> no cuenta los NULL → Pedro 0 (correcto).</p>
+
+<h3>6.7 Sin foreign keys no hay protección</h3>
+<p>Como no hay FK, la base de datos permite insertar un pedido con <code>id_cliente = 99</code> aunque ese cliente no exista (pedido 6). Los LEFT/RIGHT JOIN + <code>IS NULL</code> sirven para encontrar esos "huérfanos".</p>
+
+<h3>6.8 Orden de las tablas</h3>
+<ul class="explain">
+  <li>En <strong>INNER JOIN</strong> el orden de las tablas no cambia el resultado.</li>
+  <li>En <strong>LEFT/RIGHT</strong> SÍ importa: decide qué tabla se conserva entera.</li>
+</ul>
+
+<h3>6.9 Rendimiento</h3>
+<p>Las columnas que usas en el ON (<code>id_cliente</code>, <code>id_producto</code>, <code>id_ciudad</code>) conviene que tengan un <strong>índice</strong> si las tablas son grandes:</p>
+<div class="code"><pre><code>CREATE INDEX idx_pedidos_cliente ON pedidos(id_cliente);</code></pre></div>
+
+<h3>6.10 ORDER BY</h3>
+<p>Sin <code>ORDER BY</code> el orden de las filas <strong>no está garantizado</strong>. Si se necesita un orden concreto, hay que indicarlo siempre.</p>
+
+<!-- ================================================================ -->
+<h2 id="chuleta">Chuleta final</h2>
+<div class="scroll">
+<table class="res cheat">
+  <tr><th>Consulta</th><th>Resultado</th></tr>
+  <tr><td>FROM A, B WHERE A.x = B.y</td><td>Join simple (= INNER)</td></tr>
+  <tr><td>FROM A JOIN B ON A.x = B.y</td><td>INNER: solo coincidencias</td></tr>
+  <tr><td>FROM A LEFT JOIN B ON ...</td><td>Todo A + lo que encaje de B (o NULL)</td></tr>
+  <tr><td>FROM A RIGHT JOIN B ON ...</td><td>Todo B + lo que encaje de A (o NULL)</td></tr>
+  <tr><td>LEFT ... WHERE B.id IS NULL</td><td>Filas de A SIN pareja en B</td></tr>
+  <tr><td>Sin ON / sin WHERE</td><td>CROSS JOIN (todo con todo, ¡cuidado!)</td></tr>
+</table>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="script">Script de creación y poblado</h2>
+<p>El mismo contenido que <code>01_crear_tablas.sql</code>. Pegar en la pestaña <strong>SQL</strong> de phpMyAdmin (sin seleccionar base de datos) y pulsar <strong>Continuar</strong>.</p>
+<details>
+<summary>Ver script completo</summary>
+<div class="code"><pre><code>CREATE DATABASE IF NOT EXISTS joins_demo
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
+USE joins_demo;
+
+DROP TABLE IF EXISTS pedidos;
+DROP TABLE IF EXISTS clientes;
+DROP TABLE IF EXISTS productos;
+DROP TABLE IF EXISTS ciudades;
+
+CREATE TABLE ciudades (
+  id     INT PRIMARY KEY,
+  nombre VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE clientes (
+  id        INT PRIMARY KEY,
+  nombre    VARCHAR(50) NOT NULL,
+  id_ciudad INT NULL            -- apunta a ciudades.id (puede ser NULL)
+);
+
+CREATE TABLE productos (
+  id     INT PRIMARY KEY,
+  nombre VARCHAR(50) NOT NULL,
+  precio DECIMAL(8,2) NOT NULL
+);
+
+CREATE TABLE pedidos (
+  id          INT PRIMARY KEY,
+  id_cliente  INT NOT NULL,     -- apunta a clientes.id
+  id_producto INT NOT NULL,     -- apunta a productos.id
+  cantidad    INT NOT NULL,
+  fecha       DATE NOT NULL
+);
+
+INSERT INTO ciudades (id, nombre) VALUES
+  (1, 'Madrid'),
+  (2, 'Barcelona'),
+  (3, 'Sevilla'),
+  (4, 'Valencia');              -- OJO: ningún cliente vive en Valencia
+
+INSERT INTO clientes (id, nombre, id_ciudad) VALUES
+  (1, 'Ana',   1),
+  (2, 'Luis',  2),
+  (3, 'Marta', 1),
+  (4, 'Pedro', 3),              -- OJO: Pedro no tiene pedidos
+  (5, 'Sara',  NULL);           -- OJO: Sara no tiene ciudad
+
+INSERT INTO productos (id, nombre, precio) VALUES
+  (1, 'Teclado',  25.00),
+  (2, 'Raton',    15.00),
+  (3, 'Monitor', 150.00),
+  (4, 'Webcam',   40.00);       -- OJO: la Webcam nunca se ha vendido
+
+INSERT INTO pedidos (id, id_cliente, id_producto, cantidad, fecha) VALUES
+  (1, 1,  1, 1, '2026-09-01'),
+  (2, 1,  3, 2, '2026-09-03'),
+  (3, 2,  2, 3, '2026-09-05'),
+  (4, 3,  1, 1, '2026-09-10'),
+  (5, 5,  2, 1, '2026-09-12'),
+  (6, 99, 3, 1, '2026-09-15');  -- OJO: el cliente 99 NO existe</code></pre></div>
+</details>
+
+<!-- ================================================================ -->
+<h2 id="ejercicios">Ejercicios</h2>
+<p>Ejercicios para practicar todo lo anterior con las tablas de <code>joins_demo</code>. Primero intentarlos sin mirar; cada uno tiene una pista y la solución escondida con el resultado esperado.</p>
+
+<h3 class="nivel">Nivel 1: un solo JOIN</h3><div class="ej">
+  <h3>Ejercicio 1. Pedidos con su producto</h3>
+  <div>Listar cada pedido con el nombre del producto y la cantidad.</div>
+  <p class="pista"><strong>Pista:</strong> INNER JOIN entre <code>pedidos</code> y <code>productos</code>.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT p.id AS pedido, pr.nombre AS producto, p.cantidad
+FROM pedidos p
+INNER JOIN productos pr ON pr.id = p.id_producto
+ORDER BY p.id;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>pedido</th><th>producto</th><th>cantidad</th></tr><tr><td>1</td><td>Teclado</td><td>1</td></tr><tr><td>2</td><td>Monitor</td><td>2</td></tr><tr><td>3</td><td>Raton</td><td>3</td></tr><tr><td>4</td><td>Teclado</td><td>1</td></tr><tr><td>5</td><td>Raton</td><td>1</td></tr><tr><td>6</td><td>Monitor</td><td>1</td></tr></table>
+    <p>Salen los 6 pedidos, incluido el 6: su cliente no existe, pero su producto sí, y aquí no se une con clientes.</p>
+  </details>
+</div>
+<div class="ej">
+  <h3>Ejercicio 2. Todos los clientes con su ciudad</h3>
+  <div>Listar <strong>todos</strong> los clientes con el nombre de su ciudad, también los que no tienen ciudad.</div>
+  <p class="pista"><strong>Pista:</strong> Si tiene que salir <em>todo</em> de una tabla, es un LEFT JOIN empezando por esa tabla.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT c.nombre AS cliente, ci.nombre AS ciudad
+FROM clientes c
+LEFT JOIN ciudades ci ON ci.id = c.id_ciudad
+ORDER BY c.id;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>cliente</th><th>ciudad</th></tr><tr><td>Ana</td><td>Madrid</td></tr><tr><td>Luis</td><td>Barcelona</td></tr><tr><td>Marta</td><td>Madrid</td></tr><tr><td>Pedro</td><td>Sevilla</td></tr><tr><td>Sara</td><td class="null">NULL</td></tr></table>
+    
+  </details>
+</div>
+<div class="ej">
+  <h3>Ejercicio 3. De RIGHT a LEFT</h3>
+  <div>Reescribir esta consulta usando LEFT JOIN, sin que cambie el resultado:
+    <div class="code"><pre><code>SELECT ci.nombre AS ciudad, c.nombre AS cliente
+FROM clientes c
+RIGHT JOIN ciudades ci ON c.id_ciudad = ci.id
+ORDER BY ci.id, c.id;</code></pre></div></div>
+  <p class="pista"><strong>Pista:</strong> Basta con cambiar el orden de las tablas.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT ci.nombre AS ciudad, c.nombre AS cliente
+FROM ciudades ci
+LEFT JOIN clientes c ON c.id_ciudad = ci.id
+ORDER BY ci.id, c.id;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>ciudad</th><th>cliente</th></tr><tr><td>Madrid</td><td>Ana</td></tr><tr><td>Madrid</td><td>Marta</td></tr><tr><td>Barcelona</td><td>Luis</td></tr><tr><td>Sevilla</td><td>Pedro</td></tr><tr><td>Valencia</td><td class="null">NULL</td></tr></table>
+    
+  </details>
+</div>
+<h3 class="nivel">Nivel 2: buscar huecos y contar</h3><div class="ej">
+  <h3>Ejercicio 4. Clientes por ciudad</h3>
+  <div>Mostrar cada ciudad con el número de clientes que viven en ella. Valencia tiene que salir con 0.</div>
+  <p class="pista"><strong>Pista:</strong> LEFT JOIN + <code>GROUP BY</code> + <code>COUNT(columna)</code> (no <code>COUNT(*)</code>).</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT ci.nombre AS ciudad, COUNT(c.id) AS num_clientes
+FROM ciudades ci
+LEFT JOIN clientes c ON c.id_ciudad = ci.id
+GROUP BY ci.id, ci.nombre
+ORDER BY ci.id;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>ciudad</th><th>num_clientes</th></tr><tr><td>Madrid</td><td>2</td></tr><tr><td>Barcelona</td><td>1</td></tr><tr><td>Sevilla</td><td>1</td></tr><tr><td>Valencia</td><td>0</td></tr></table>
+    
+  </details>
+</div>
+<div class="ej">
+  <h3>Ejercicio 5. Pedidos huérfanos</h3>
+  <div>Encontrar los pedidos cuyo cliente no existe en la tabla <code>clientes</code>.</div>
+  <p class="pista"><strong>Pista:</strong> LEFT JOIN desde <code>pedidos</code> + <code>WHERE ... IS NULL</code>.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT p.id AS pedido, p.id_cliente
+FROM pedidos p
+LEFT JOIN clientes c ON c.id = p.id_cliente
+WHERE c.id IS NULL;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>pedido</th><th>id_cliente</th></tr><tr><td>6</td><td>99</td></tr></table>
+    
+  </details>
+</div>
+<div class="ej">
+  <h3>Ejercicio 6. Unidades vendidas por producto</h3>
+  <div>Mostrar cada producto con el total de unidades vendidas. La Webcam tiene que salir con 0, no con NULL.</div>
+  <p class="pista"><strong>Pista:</strong> LEFT JOIN + <code>SUM</code>. Para cambiar un NULL por 0 se usa <code>IFNULL(valor, 0)</code>.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT pr.nombre AS producto, IFNULL(SUM(p.cantidad), 0) AS unidades
+FROM productos pr
+LEFT JOIN pedidos p ON p.id_producto = pr.id
+GROUP BY pr.id, pr.nombre
+ORDER BY pr.id;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>producto</th><th>unidades</th></tr><tr><td>Teclado</td><td>2</td></tr><tr><td>Raton</td><td>4</td></tr><tr><td>Monitor</td><td>3</td></tr><tr><td>Webcam</td><td>0</td></tr></table>
+    
+  </details>
+</div>
+<h3 class="nivel">Nivel 3: varias tablas</h3><div class="ej">
+  <h3>Ejercicio 7. ¿Quién ha comprado un Monitor?</h3>
+  <div>Listar el nombre de los clientes que han comprado algún Monitor, sin repetir nombres.</div>
+  <p class="pista"><strong>Pista:</strong> Tres tablas con INNER JOIN, un <code>WHERE</code> por el nombre del producto y <code>DISTINCT</code>.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT DISTINCT c.nombre AS cliente
+FROM clientes c
+INNER JOIN pedidos   p  ON p.id_cliente = c.id
+INNER JOIN productos pr ON pr.id = p.id_producto
+WHERE pr.nombre = 'Monitor';</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>cliente</th></tr><tr><td>Ana</td></tr></table>
+    <p>El pedido 6 también es un Monitor, pero su cliente no existe, así que el INNER JOIN lo descarta.</p>
+  </details>
+</div>
+<div class="ej">
+  <h3>Ejercicio 8. Ventas por ciudad</h3>
+  <div>Calcular el importe total vendido en cada ciudad (cantidad × precio).</div>
+  <p class="pista"><strong>Pista:</strong> Las 4 tablas con INNER JOIN y <code>GROUP BY</code> por ciudad.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT ci.nombre AS ciudad, SUM(p.cantidad * pr.precio) AS total_ventas
+FROM pedidos p
+INNER JOIN clientes  c  ON c.id  = p.id_cliente
+INNER JOIN ciudades  ci ON ci.id = c.id_ciudad
+INNER JOIN productos pr ON pr.id = p.id_producto
+GROUP BY ci.id, ci.nombre
+ORDER BY total_ventas DESC;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>ciudad</th><th>total_ventas</th></tr><tr><td>Madrid</td><td>350.00</td></tr><tr><td>Barcelona</td><td>45.00</td></tr></table>
+    <p>Pregunta para pensar: en total se vendieron 560 €. ¿Por qué aquí solo suman 395? (Respuesta: el pedido de Sara no tiene ciudad y el pedido 6 no tiene cliente; los INNER JOIN los descartan.)</p>
+  </details>
+</div>
+<div class="ej">
+  <h3>Ejercicio 9. Total gastado por cliente</h3>
+  <div>Mostrar lo que ha gastado cada cliente, de mayor a menor. Pedro tiene que salir con 0.</div>
+  <p class="pista"><strong>Pista:</strong> LEFT JOIN encadenados (clientes → pedidos → productos) + <code>IFNULL(SUM(...), 0)</code>.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT c.nombre AS cliente,
+       IFNULL(SUM(p.cantidad * pr.precio), 0) AS total_gastado
+FROM clientes c
+LEFT JOIN pedidos   p  ON p.id_cliente = c.id
+LEFT JOIN productos pr ON pr.id = p.id_producto
+GROUP BY c.id, c.nombre
+ORDER BY total_gastado DESC;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>cliente</th><th>total_gastado</th></tr><tr><td>Ana</td><td>325.00</td></tr><tr><td>Luis</td><td>45.00</td></tr><tr><td>Marta</td><td>25.00</td></tr><tr><td>Sara</td><td>15.00</td></tr><tr><td>Pedro</td><td>0.00</td></tr></table>
+    
+  </details>
+</div>
+<h3 class="nivel">Nivel 4: todo junto</h3><div class="ej">
+  <h3>Ejercicio 10. Encontrar el error</h3>
+  <div>Se quiere listar <strong>todos</strong> los clientes con cuántos pedidos de 2 o más unidades tienen (0 si no tienen ninguno). Esta consulta solo devuelve 2 filas. ¿Qué está mal? Arreglarla.
+    <div class="code"><pre><code>SELECT c.nombre AS cliente, COUNT(p.id) AS pedidos_grandes
+FROM clientes c
+LEFT JOIN pedidos p ON p.id_cliente = c.id
+WHERE p.cantidad &gt;= 2
+GROUP BY c.id, c.nombre;</code></pre></div></div>
+  <p class="pista"><strong>Pista:</strong> Repasar el punto 6.3 (filtro en el WHERE en un LEFT JOIN).</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT c.nombre AS cliente, COUNT(p.id) AS pedidos_grandes
+FROM clientes c
+LEFT JOIN pedidos p ON p.id_cliente = c.id AND p.cantidad &gt;= 2
+GROUP BY c.id, c.nombre
+ORDER BY c.id;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>cliente</th><th>pedidos_grandes</th></tr><tr><td>Ana</td><td>1</td></tr><tr><td>Luis</td><td>1</td></tr><tr><td>Marta</td><td>0</td></tr><tr><td>Pedro</td><td>0</td></tr><tr><td>Sara</td><td>0</td></tr></table>
+    <p>El filtro sobre la tabla de la derecha (<code>pedidos</code>) tiene que ir en el <code>ON</code>. En el <code>WHERE</code> elimina las filas con NULL y el LEFT JOIN se convierte en un INNER JOIN.</p>
+  </details>
+</div>
+<div class="ej">
+  <h3>Ejercicio 11. Ficha completa de clientes</h3>
+  <div>Hacer un informe con <strong>todos</strong> los clientes: nombre, ciudad, número de pedidos y total gastado. No puede faltar nadie.</div>
+  <p class="pista"><strong>Pista:</strong> Combinar todo: LEFT JOIN con las 4 tablas, <code>COUNT(columna)</code>, <code>IFNULL(SUM(...), 0)</code> y <code>GROUP BY</code>.</p>
+  <details>
+    <summary>Ver solución</summary>
+    <div class="code"><pre><code>SELECT c.nombre AS cliente,
+       ci.nombre AS ciudad,
+       COUNT(p.id) AS num_pedidos,
+       IFNULL(SUM(p.cantidad * pr.precio), 0) AS total
+FROM clientes c
+LEFT JOIN ciudades  ci ON ci.id = c.id_ciudad
+LEFT JOIN pedidos   p  ON p.id_cliente = c.id
+LEFT JOIN productos pr ON pr.id = p.id_producto
+GROUP BY c.id, c.nombre, ci.nombre
+ORDER BY c.id;</code></pre></div>
+    <p><strong>Resultado esperado:</strong></p>
+    <table class="res"><tr><th>cliente</th><th>ciudad</th><th>num_pedidos</th><th>total</th></tr><tr><td>Ana</td><td>Madrid</td><td>2</td><td>325.00</td></tr><tr><td>Luis</td><td>Barcelona</td><td>1</td><td>45.00</td></tr><tr><td>Marta</td><td>Madrid</td><td>1</td><td>25.00</td></tr><tr><td>Pedro</td><td>Sevilla</td><td>0</td><td>0.00</td></tr><tr><td>Sara</td><td class="null">NULL</td><td>1</td><td>15.00</td></tr></table>
+    
+  </details>
+</div>
+
+
+</main>
+</div>
+
+<script>
+  // Botón "Copiar" en cada bloque de código + resaltado de palabras clave y comentarios
+  var KW = /\b(SELECT|FROM|WHERE|INNER|LEFT|RIGHT|JOIN|ON|AND|AS|ORDER BY|GROUP BY|IS NOT NULL|IS NULL|UNION|COUNT|CREATE|TABLE|DATABASE|INDEX|IF NOT EXISTS|IF EXISTS|DROP|USE|INSERT INTO|VALUES|PRIMARY KEY|NOT NULL|NULL|INT|VARCHAR|DECIMAL|DATE|CHARACTER SET|COLLATE)\b/g;
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  document.querySelectorAll('.code').forEach(function (block) {
+    var codeEl = block.querySelector('code');
+    var raw = codeEl.textContent;
+    codeEl.innerHTML = raw.split('\n').map(function (line) {
+      var i = line.indexOf('--');
+      var code = i >= 0 ? line.slice(0, i) : line;
+      var cm = i >= 0 ? line.slice(i) : '';
+      var html = esc(code).replace(KW, '<span class="kw">$1</span>');
+      return html + (cm ? '<span class="cm">' + esc(cm) + '</span>' : '');
+    }).join('\n');
+    var btn = document.createElement('button');
+    btn.textContent = 'Copiar';
+    btn.addEventListener('click', function () {
+      var done = function () { btn.textContent = '¡Copiado!'; setTimeout(function () { btn.textContent = 'Copiar'; }, 1500); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(raw).then(done);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = raw; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+    block.appendChild(btn);
+  });
+</script>
+</body>
+</html>
